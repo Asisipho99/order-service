@@ -80,12 +80,24 @@ public class OrderService {
     public OrderResponse updateStatus(Long orderId, String status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        OrderStatus newStatus;
         try {
-            order.setStatus(OrderStatus.valueOf(status.toUpperCase()));
+            newStatus = OrderStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new RuntimeException(
                     "Invalid status. Must be one of: PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED");
         }
+
+        OrderStatus current = order.getStatus();
+        if (!current.canTransitionTo(newStatus)) {
+            throw new RuntimeException(
+                    "Cannot transition order from " + current
+                    + " to " + newStatus
+                    + ". Allowed transitions: " + current.allowedTransitions());
+        }
+
+        order.setStatus(newStatus);
         return mapToResponse(orderRepository.save(order));
     }
 
