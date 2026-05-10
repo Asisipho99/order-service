@@ -55,7 +55,7 @@ public class OrderService {
 
     // Get a single order by ID
     public OrderResponse getOrderById(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
         return mapToResponse(order);
     }
@@ -70,7 +70,7 @@ public class OrderService {
 
     // Get all orders (admin)
     public List<OrderResponse> getAllOrders() {
-        return orderRepository.findAll()
+        return orderRepository.findAllWithItems()
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
