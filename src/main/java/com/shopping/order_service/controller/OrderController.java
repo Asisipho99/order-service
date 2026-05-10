@@ -85,9 +85,9 @@ public class OrderController {
     @PutMapping("/{orderId}/cancel")
     public ResponseEntity<OrderResponse> cancel(@PathVariable Long orderId,
                                                  Authentication auth) {
-        OrderResponse order = orderService.getOrderById(orderId);
-
         if (!isAdmin(auth)) {
+            // Fetch once for the auth check — cancelOrder will reuse the same transaction
+            OrderResponse order = orderService.getOrderById(orderId);
             Long tokenCustomerId = (Long) auth.getCredentials();
             if (!order.getCustomerId().equals(tokenCustomerId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
