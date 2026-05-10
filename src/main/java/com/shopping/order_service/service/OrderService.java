@@ -17,7 +17,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final OrderRepository orderRepository;
+    private final OrderRepository            orderRepository;
+    private final StatusNotificationService  notificationService;
 
     // Place a new order
     @Transactional
@@ -98,7 +99,12 @@ public class OrderService {
         }
 
         order.setStatus(newStatus);
-        return mapToResponse(orderRepository.save(order));
+        OrderResponse response = mapToResponse(orderRepository.save(order));
+
+        // Notify customer of the status change asynchronously
+        notificationService.sendStatusUpdateEmail(response);
+
+        return response;
     }
 
     // Cancel an order
@@ -114,7 +120,12 @@ public class OrderService {
         }
 
         order.setStatus(OrderStatus.CANCELLED);
-        return mapToResponse(orderRepository.save(order));
+        OrderResponse response = mapToResponse(orderRepository.save(order));
+
+        // Notify customer of cancellation asynchronously
+        notificationService.sendStatusUpdateEmail(response);
+
+        return response;
     }
 
     // Map Order entity to OrderResponse DTO
