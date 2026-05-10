@@ -17,7 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final OrderService orderService;
+    private final OrderService               orderService;
+    private final com.shopping.order_service.service.StatusNotificationService notificationService;
 
     // POST /api/orders — place a new order
     @PostMapping
@@ -77,7 +78,10 @@ public class OrderController {
         if (!isAdmin(auth)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        return ResponseEntity.ok(orderService.updateStatus(orderId, status));
+        OrderResponse response = orderService.updateStatus(orderId, status);
+        // Fire notification after transaction commits — avoids blocking the response
+        notificationService.sendStatusUpdateEmail(response);
+        return ResponseEntity.ok(response);
     }
 
     // PUT /api/orders/{orderId}/cancel — cancel an order
@@ -86,14 +90,15 @@ public class OrderController {
     public ResponseEntity<OrderResponse> cancel(@PathVariable Long orderId,
                                                  Authentication auth) {
         if (!isAdmin(auth)) {
-            // Fetch once for the auth check — cancelOrder will reuse the same transaction
             OrderResponse order = orderService.getOrderById(orderId);
             Long tokenCustomerId = (Long) auth.getCredentials();
             if (!order.getCustomerId().equals(tokenCustomerId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
         }
-        return ResponseEntity.ok(orderService.cancelOrder(orderId));
+        OrderResponse response = orderService.cancelOrder(orderId);
+        notificationService.sendStatusUpdateEmail(response);
+        return ResponseEntity.ok(response);
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

@@ -100,7 +100,6 @@ public class OrderService {
 
         order.setStatus(newStatus);
         OrderResponse response = mapToResponse(orderRepository.save(order));
-        notificationService.sendStatusUpdateEmail(response);
         return response;
     }
 
@@ -118,7 +117,6 @@ public class OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
         OrderResponse response = mapToResponse(orderRepository.save(order));
-        notificationService.sendStatusUpdateEmail(response);
         return response;
     }
 
