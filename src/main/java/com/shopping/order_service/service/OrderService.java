@@ -79,7 +79,7 @@ public class OrderService {
     // Update order status (admin)
     @Transactional
     public OrderResponse updateStatus(Long orderId, String status) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
         OrderStatus newStatus;
@@ -100,17 +100,14 @@ public class OrderService {
 
         order.setStatus(newStatus);
         OrderResponse response = mapToResponse(orderRepository.save(order));
-
-        // Notify customer of the status change asynchronously
         notificationService.sendStatusUpdateEmail(response);
-
         return response;
     }
 
     // Cancel an order
     @Transactional
     public OrderResponse cancelOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
         if (order.getStatus() == OrderStatus.SHIPPED ||
@@ -121,10 +118,7 @@ public class OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
         OrderResponse response = mapToResponse(orderRepository.save(order));
-
-        // Notify customer of cancellation asynchronously
         notificationService.sendStatusUpdateEmail(response);
-
         return response;
     }
 
