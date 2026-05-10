@@ -34,7 +34,10 @@ public class SecurityConfig {
                 .sessionManagement(s -> s
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // All order endpoints require authentication
+                        // POST /api/orders is called by integration-service internally
+                        // (server-to-server, no user JWT available)
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/orders").permitAll()
+                        // All other order endpoints require a valid JWT
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
