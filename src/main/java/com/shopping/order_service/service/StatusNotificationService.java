@@ -32,8 +32,20 @@ public class StatusNotificationService {
     @Async
     public void sendStatusUpdateEmail(OrderResponse order) {
         try {
-            // Fetch customer email from user-service
-            String customerEmail = getCustomerEmail(order.getCustomerId());
+            // Fetch customer details from user-service in one call
+            String customerEmail = null;
+            String customerName  = null;
+            try {
+                ResponseEntity<Map> response = restTemplate.getForEntity(
+                        userServiceUrl + "/api/users/" + order.getCustomerId(), Map.class);
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    customerEmail = (String) response.getBody().get("email");
+                    customerName  = (String) response.getBody().get("firstName");
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch customer {}: {}", order.getCustomerId(), e.getMessage());
+            }
+
             if (customerEmail == null) {
                 log.warn("Could not fetch email for customer {} — skipping status notification",
                         order.getCustomerId());
@@ -41,12 +53,13 @@ public class StatusNotificationService {
             }
 
             Map<String, Object> emailRequest = new HashMap<>();
-            emailRequest.put("to",          customerEmail);
-            emailRequest.put("subject",     "Order Update — Your order is now " + order.getStatus());
-            emailRequest.put("type",        "STATUS_UPDATE");
-            emailRequest.put("orderId",     String.valueOf(order.getOrderId()));
-            emailRequest.put("orderStatus", order.getStatus().name());
-            emailRequest.put("body",        buildBody(order));
+            emailRequest.put("to",           customerEmail);
+            emailRequest.put("subject",      "Order Update — Your order is now " + order.getStatus());
+            emailRequest.put("type",         "STATUS_UPDATE");
+            emailRequest.put("orderId",      String.valueOf(order.getOrderId()));
+            emailRequest.put("orderStatus",  order.getStatus().name());
+            emailRequest.put("customerName", customerName);
+            emailRequest.put("body",         buildBody(order));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -75,6 +88,19 @@ public class StatusNotificationService {
             }
         } catch (Exception e) {
             log.warn("Could not fetch customer {}: {}", customerId, e.getMessage());
+        }
+        return null;
+    }
+
+    private String getCustomerName(Long customerId) {
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(
+                    userServiceUrl + "/api/users/" + customerId, Map.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return (String) response.getBody().get("firstName");
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch customer name {}: {}", customerId, e.getMessage());
         }
         return null;
     }
